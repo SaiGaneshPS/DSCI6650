@@ -1,0 +1,190 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+
+# Generate the means for the bandit arms
+def bandit_problems(k):
+    return np.random.normal(0, 1, k)
+
+# Non-stationary problem settings
+def drift_change(means):
+    means += np.random.normal(0, 0.001, len(means))
+    return means
+
+def mean_reverting_change(means):
+    means = 0.5 * means + np.random.normal(0, 0.01, len(means))
+    return means
+
+def abrupt_change(means):
+    if np.random.rand() < 0.005:
+        np.random.shuffle(means)
+    return means
+
+# Sample rewards from the normal distributions
+def sample_rewards(means):
+    return np.random.normal(means, 1)
+
+# Greedy algorithm
+def greedy(means, steps=1000):
+    k = len(means)
+    action_values = np.zeros(k)
+    action_counts = np.zeros(k)
+    rewards = np.zeros(steps)
+    optimal_action = np.argmax(means)
+    optimal_action_counts = np.zeros(steps)
+    
+    for t in range(steps):
+        action = np.argmax(action_values)
+        reward = np.random.normal(means[action], 1)
+        action_counts[action] += 1
+        action_values[action] += (reward - action_values[action]) / action_counts[action]
+        rewards[t] = reward
+        if action == optimal_action:
+            optimal_action_counts[t] = 1
+    
+    return rewards, optimal_action_counts
+
+# Epsilon-Greedy algorithm with fixed epsilon
+def epsilon_greedy_fixed(means, epsilon, steps=1000):
+    k = len(means)
+    action_values = np.zeros(k)
+    action_counts = np.zeros(k)
+    rewards = np.zeros(steps)
+    optimal_action = np.argmax(means)
+    optimal_action_counts = np.zeros(steps)
+    
+    for t in range(steps):
+        if np.random.rand() < epsilon:
+            action = np.random.randint(k)
+        else:
+            action = np.argmax(action_values)
+        reward = np.random.normal(means[action], 1)
+        action_counts[action] += 1
+        action_values[action] += (reward - action_values[action]) / action_counts[action]
+        rewards[t] = reward
+        if action == optimal_action:
+            optimal_action_counts[t] = 1
+    
+    return rewards, optimal_action_counts
+
+# Epsilon-Greedy algorithm with decreasing epsilon
+def epsilon_greedy_decreasing(means, steps=1000):
+    k = len(means)
+    action_values = np.zeros(k)
+    action_counts = np.zeros(k)
+    rewards = np.zeros(steps)
+    optimal_action = np.argmax(means)
+    optimal_action_counts = np.zeros(steps)
+    
+    for t in range(steps):
+        epsilon = 0.1 / (t + 1)
+        if np.random.rand() < epsilon:
+            action = np.random.randint(k)
+        else:
+            action = np.argmax(action_values)
+        reward = np.random.normal(means[action], 1)
+        action_counts[action] += 1
+        action_values[action] += (reward - action_values[action]) / action_counts[action]
+        rewards[t] = reward
+        if action == optimal_action:
+            optimal_action_counts[t] = 1
+    
+    return rewards, optimal_action_counts
+
+# Optimistic Greedy algorithm
+def optimistic_greedy(means, initial_value, steps=1000):
+    k = len(means)
+    action_values = np.full(k, initial_value)
+    action_counts = np.zeros(k)
+    rewards = np.zeros(steps)
+    optimal_action = np.argmax(means)
+    optimal_action_counts = np.zeros(steps)
+    
+    for t in range(steps):
+        action = np.argmax(action_values)
+        reward = np.random.normal(means[action], 1)
+        action_counts[action] += 1
+        action_values[action] += (reward - action_values[action]) / action_counts[action]
+        rewards[t] = reward
+        if action == optimal_action:
+            optimal_action_counts[t] = 1
+    
+    return rewards, optimal_action_counts
+
+# Problem parameters
+k = 10
+steps = 20000
+repeats = 1000
+
+# Function to run and compare algorithms on non-stationary problems
+drift_rewards = {"Optimistic Greedy": [], "Epsilon-Greedy (Fixed)": [], "Epsilon-Greedy (Decreasing)": []}
+mean_reverting_rewards = {"Optimistic Greedy": [], "Epsilon-Greedy (Fixed)": [], "Epsilon-Greedy (Decreasing)": []}
+abrupt_rewards = {"Optimistic Greedy": [], "Epsilon-Greedy (Fixed)": [], "Epsilon-Greedy (Decreasing)": []}
+
+for _ in range(repeats):
+    means = bandit_problems(k)
+    
+    # Applying drift change
+    drift_means = means.copy()
+    for _ in range(steps):
+        drift_means = drift_change(drift_means)
+    rewards, _ = optimistic_greedy(drift_means, initial_value=5, steps=steps)
+    drift_rewards["Optimistic Greedy"].append(rewards[-1])
+    
+    # Epsilon value chosen from previous pilot runs
+    rewards, _ = epsilon_greedy_fixed(drift_means, epsilon=0.1, steps=steps)
+    drift_rewards["Epsilon-Greedy (Fixed)"].append(rewards[-1])
+    
+    rewards, _ = epsilon_greedy_decreasing(drift_means, steps=steps)
+    drift_rewards["Epsilon-Greedy (Decreasing)"].append(rewards[-1])
+    
+    # Applying mean-reverting change on the means
+    mean_reverting_means = means.copy()
+    for _ in range(steps):
+        mean_reverting_means = mean_reverting_change(mean_reverting_means)
+    rewards, _ = optimistic_greedy(mean_reverting_means, initial_value=5, steps=steps)
+    mean_reverting_rewards["Optimistic Greedy"].append(rewards[-1])
+    
+    rewards, _ = epsilon_greedy_fixed(mean_reverting_means, epsilon=0.1, steps=steps)
+    mean_reverting_rewards["Epsilon-Greedy (Fixed)"].append(rewards[-1])
+    
+    rewards, _ = epsilon_greedy_decreasing(mean_reverting_means, steps=steps)
+    mean_reverting_rewards["Epsilon-Greedy (Decreasing)"].append(rewards[-1])
+    
+    # Applying abrupt change on the means
+    abrupt_means = means.copy()
+    for _ in range(steps):
+        abrupt_means = abrupt_change(abrupt_means)
+    rewards, _ = optimistic_greedy(abrupt_means, initial_value=5, steps=steps)
+    abrupt_rewards["Optimistic Greedy"].append(rewards[-1])
+    
+    rewards, _ = epsilon_greedy_fixed(abrupt_means, epsilon=0.1, steps=steps)
+    abrupt_rewards["Epsilon-Greedy (Fixed)"].append(rewards[-1])
+    
+    rewards, _ = epsilon_greedy_decreasing(abrupt_means, steps=steps)
+    abrupt_rewards["Epsilon-Greedy (Decreasing)"].append(rewards[-1])
+
+# Plotting drift change
+plt.figure(figsize=(7, 5))
+plt.boxplot([drift_rewards["Optimistic Greedy"], drift_rewards["Epsilon-Greedy (Fixed)"], drift_rewards["Epsilon-Greedy (Decreasing)"]])
+plt.xticks([1, 2, 3], ["Optimistic Greedy", "Epsilon-Greedy (Fixed)", "Epsilon-Greedy (Decreasing)"])
+plt.title("Terminal Rewards Distribution (Drift Change)")
+plt.tight_layout()
+plt.show()
+
+# Plotting mean-reverting change
+plt.figure(figsize=(7, 5))
+plt.boxplot([mean_reverting_rewards["Optimistic Greedy"], mean_reverting_rewards["Epsilon-Greedy (Fixed)"], mean_reverting_rewards["Epsilon-Greedy (Decreasing)"]])
+plt.xticks([1, 2, 3], ["Optimistic Greedy", "Epsilon-Greedy (Fixed)", "Epsilon-Greedy (Decreasing)"])
+plt.title("Terminal Rewards Distribution (Mean-Reverting Change)")
+plt.tight_layout()
+plt.show()
+
+# Plotting abrupt change
+plt.figure(figsize=(7, 5))
+plt.boxplot([abrupt_rewards["Optimistic Greedy"], abrupt_rewards["Epsilon-Greedy (Fixed)"], abrupt_rewards["Epsilon-Greedy (Decreasing)"]])
+plt.xticks([1, 2, 3], ["Optimistic Greedy", "Epsilon-Greedy (Fixed)", "Epsilon-Greedy (Decreasing)"])
+plt.title("Terminal Rewards Distribution (Abrupt Change)")
+plt.tight_layout()
+plt.show()
