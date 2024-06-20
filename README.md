@@ -14,7 +14,7 @@ k = 10;
 steps = 1000;
 runs = 1000;
 
-Running Part_1 code located in the RL-A1 folder will produce a single figure window
+Running [Part_1](https://github.com/SaiGaneshPS/DSCI6650/blob/main/RL-A1/Part_1) code located in the RL-A1 folder will produce a single figure window
 which has two parts, Steps vs Average Rewards and Steps vs Optimal Action percentage.
 
 ## Part 2
@@ -27,5 +27,5 @@ Once the changes are made, the performance of three algorithms are compared:
 2. Epsilon Greedy Algorithm with fixed Epsilon
 3. Epsilon Greedy Algorithm with decreasing Epsilon
 
-Running Part_2 code located in the RL-A1 folder will produce three box plot figures for each
+Running [Part_2](https://github.com/SaiGaneshPS/DSCI6650/blob/main/RL-A1/Part_2) code located in the RL-A1 folder will produce three box plot figures for each
 change and this tells us about the terminal reward distributions.
