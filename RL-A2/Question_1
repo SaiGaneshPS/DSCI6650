@@ -1,0 +1,165 @@
+import numpy as np
+
+class Gridworld:
+    def __init__(self, grid_size=5, gamma=0.95):
+        self.grid_size = grid_size
+        self.gamma = gamma # Discount factor
+        self.states = [(i, j) for i in range(grid_size) for j in range(grid_size)]
+        self.special_states = {
+            (0, 1): ('blue', 5, (2, 2)),
+            (0, 4): ('green', 2.5, [(4, 4), (2, 2)]),
+            (2, 2): ('red', 0, None),
+            (4, 4): ('yellow', 0, None)
+        }
+        self.actions = ['up', 'down', 'left', 'right']
+    
+    def get_new_state_reward(self, state, action):
+
+        # Defining all actions and new states
+        x, y = state
+        if action == 'up':
+            new_x, new_y = x - 1, y
+        elif action == 'down':
+            new_x, new_y = x + 1, y
+        elif action == 'left':
+            new_x, new_y = x, y - 1
+        elif action == 'right':
+            new_x, new_y = x, y + 1
+        
+        # When it goes out of bounds, give reward of -0.5 else 0 for white-white
+        if 0 <= new_x < self.grid_size and 0 <= new_y < self.grid_size:
+            new_state = (new_x, new_y)
+            reward = 0
+        else:
+            new_state = state
+            reward = -0.5
+        
+        # Checking if next state is a special state
+        if new_state in self.special_states:
+            state_info = self.special_states[new_state]
+            reward = state_info[1]
+            if state_info[0] == 'blue':
+                new_state = state_info[2]
+            elif state_info[0] == 'green':
+                new_state = state_info[2][np.random.choice([0, 1])]
+        
+        return new_state, reward
+    
+
+    # Method#1 Bellman Equation
+    def solve_bellman_optimality(self):
+
+        # Solving bellman equation explicitly
+        values = np.zeros((self.grid_size, self.grid_size))
+        policy = np.zeros((self.grid_size, self.grid_size), dtype=int)
+        
+        while True:
+            delta = 0
+            for state in self.states:
+                x, y = state
+                v = values[x, y]
+                value_sum = []
+                for action in self.actions:
+                    new_state, reward = self.get_new_state_reward(state, action)
+                    next_x, next_y = new_state
+                    value_sum.append(reward + self.gamma * values[next_x, next_y])
+                best_action = np.argmax(value_sum)
+                values[x, y] = value_sum[best_action]
+                policy[x, y] = best_action
+                delta = max(delta, abs(v - values[x, y]))
+            if delta < 1e-3:
+                break
+        
+        return values, policy
+    
+    # Method#2 Iterative policy evaluation
+    def policy_iteration(self, theta=1e-3, max_iterations=10000):
+        policy = np.random.choice(len(self.actions), size=(self.grid_size, self.grid_size))
+        values = np.zeros((self.grid_size, self.grid_size))
+        
+        def policy_evaluation(policy):
+            for _ in range(max_iterations):
+                delta = 0
+                new_values = np.copy(values)
+                for state in self.states:
+                    x, y = state
+                    v = values[x, y]
+                    action = self.actions[policy[x, y]]
+                    new_state, reward = self.get_new_state_reward(state, action)
+                    next_x, next_y = new_state
+                    new_values[x, y] = reward + self.gamma * values[next_x, next_y]
+                    delta = max(delta, abs(v - new_values[x, y]))
+                values[:] = new_values
+                if delta < theta:
+                    break
+            return values
+        
+        while True:
+            policy_stable = True
+            values = policy_evaluation(policy)
+            for state in self.states:
+                x, y = state
+                old_action = policy[x, y]
+                value_sum = []
+                for action in self.actions:
+                    new_state, reward = self.get_new_state_reward(state, action)
+                    next_x, next_y = new_state
+                    value_sum.append(reward + self.gamma * values[next_x, next_y])
+                best_action = np.argmax(value_sum)
+                policy[x, y] = best_action
+                if old_action != best_action:
+                    policy_stable = False
+            if policy_stable:
+                break
+        
+        return values, policy
+    
+    # Method#3 Value iteration
+    def value_iteration(self, theta=1e-3, max_iterations=10000):
+        values = np.zeros((self.grid_size, self.grid_size))
+        policy = np.zeros((self.grid_size, self.grid_size), dtype=int)
+        
+        for _ in range(max_iterations):
+            delta = 0
+            new_values = np.copy(values)
+            for state in self.states:
+                x, y = state
+                v = values[x, y]
+                value_sum = []
+                for action in self.actions:
+                    new_state, reward = self.get_new_state_reward(state, action)
+                    next_x, next_y = new_state
+                    value_sum.append(reward + self.gamma * values[next_x, next_y])
+                best_action = np.argmax(value_sum)
+                new_values[x, y] = value_sum[best_action]
+                policy[x, y] = best_action
+                delta = max(delta, abs(v - new_values[x, y]))
+            values[:] = new_values
+            if delta < theta:
+                break
+        
+        return values, policy
+
+# Creating the environment
+env = Gridworld()
+
+# Finding both the value functions and optimal policies
+values_bellman, policy_bellman = env.solve_bellman_optimality()
+values_policy_iter, policy_policy_iter = env.policy_iteration()
+values_value_iter, policy_value_iter = env.value_iteration()
+
+# Results for part 1 and 2 of the question
+print("Values from Bellman Optimality Equation:")
+print(values_bellman)
+print("Policy from Bellman Optimality Equation:")
+print(policy_bellman)
+
+print("\nValues from Policy Iteration:")
+print(values_policy_iter)
+print("Policy from Policy Iteration:")
+print(policy_policy_iter)
+
+print("\nValues from Value Iteration:")
+print(values_value_iter)
+print("Policy from Value Iteration:")
+print(policy_value_iter)
