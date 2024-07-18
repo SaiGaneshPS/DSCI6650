@@ -6,8 +6,8 @@ class Gridworld:
         self.gamma = gamma # Discount factor
         self.states = [(i, j) for i in range(grid_size) for j in range(grid_size)]
         self.special_states = {
-            (0, 1): ('blue', 5, (2, 2)),
-            (0, 4): ('green', 2.5, [(4, 4), (2, 2)]),
+            (0, 1): ('blue', 5, (2, 3)),
+            (0, 4): ('green', 2.5, [(4, 4), (2, 3)]),
             (2, 2): ('red', 0, None),
             (4, 4): ('yellow', 0, None)
         }
