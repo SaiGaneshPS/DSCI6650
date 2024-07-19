@@ -34,10 +34,10 @@ change and this tells us about the terminal reward distributions.
 ## Part 1
 
 This [part](https://github.com/SaiGaneshPS/DSCI6650/blob/main/RL-A2/Question_1) uses a grid with 4 states:
-Blue (0,1) - Reward = 5, Action = Teleport to Red
-Green (0,4)  - Reward = 2.5, Action = Teleport to Red or Yellow (0.5 Probability)
-Red (3, 2) - More prone to go out of bounds, Reward = -0.5
-Yellow (4, 4) - Most prone to go out of bounds, Reward = -0.5
+* Blue (0,1) - Reward = 5, Action = Teleport to Red
+* Green (0,4)  - Reward = 2.5, Action = Teleport to Red or Yellow (0.5 Probability)
+* Red (3, 2) - More prone to go out of bounds, Reward = -0.5
+* Yellow (4, 4) - Most prone to go out of bounds, Reward = -0.5
 
 The task is to use three different algorithms:
 1. Bellman equation
@@ -49,7 +49,7 @@ To obtain the value function and the optimal policy for this grid.
 ## Part 2
 
 In this [part](https://github.com/SaiGaneshPS/DSCI6650/blob/main/RL-A2/Question_2) there is one additional state:
-Black (4,0 & 2,4) - Terminating states in Part-2
+* Black (4,0 & 2,4) - Terminating states in Part-2
 AND the location of red square changes.
 
 The task here is to compare two methods for the optimal policy:
