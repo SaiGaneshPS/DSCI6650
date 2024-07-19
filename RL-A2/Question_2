@@ -1,0 +1,237 @@
+import numpy as np
+
+# Gridworld with termination states
+class ModifiedGridworld:
+    def __init__(self):
+        self.grid_size = 5
+        self.start_state = (0, 0)
+
+        # Black squares
+        self.terminal_states = [(2, 4), (4, 0)]
+        self.special_states = {
+            (0, 1): ('blue', 5, (4, 2)),
+            (0, 4): ('green', 2.5, [(4, 4), (4, 2)]),
+            (4, 2): ('red', 0, None),
+            (4, 4): ('yellow', 0, None)
+        }
+        self.discount_factor = 0.95
+        self.actions = ['up', 'down', 'left', 'right']
+        self.policy = np.ones((self.grid_size, self.grid_size, len(self.actions))) / len(self.actions)
+        self.q_values = np.zeros((self.grid_size, self.grid_size, len(self.actions)))
+
+    # Action to take and new state calculation
+    def step(self, state, action):
+        if state in self.terminal_states:
+            return state, 0
+        x, y = state
+        if action == 'up':
+            new_x, new_y = x - 1, y
+        elif action == 'down':
+            new_x, new_y = x + 1, y
+        elif action == 'left':
+            new_x, new_y = x, y - 1
+        elif action == 'right':
+            new_x, new_y = x, y + 1
+
+        # Out of bounds, don't move and negative reward of -0.5
+        if new_x < 0 or new_x >= self.grid_size or new_y < 0 or new_y >= self.grid_size:
+            return state, -0.5
+        
+        new_state = (new_x, new_y)
+
+        # For blue and green states, termination states and white-white transition
+        if new_state in self.special_states:
+            state_info = self.special_states[new_state]
+            reward = state_info[1]
+            if state_info[0] == 'blue':
+                new_state = state_info[2]
+            elif state_info[0] == 'green':
+                new_state = state_info[2][np.random.choice([0, 1])]
+            return new_state, reward
+        elif new_state in self.terminal_states:
+            return new_state, 0
+        else:
+            return new_state, -0.2
+
+    # Generation of episodes, epsilon is chosen based on trial and error
+    # Also a limit of 300 steps is given to not allow the agent to move endlessly
+    # Greatly saving running time
+    def generate_episode(self, exploring_starts=True, epsilon = 0.2, max_steps=300):
+        episode = []
+        if exploring_starts:
+            state = (np.random.randint(self.grid_size), np.random.randint(self.grid_size))
+        else:
+            state = self.start_state
+
+        steps = 0
+        while state not in self.terminal_states and steps < max_steps:
+            if exploring_starts:
+                action_idx = np.random.choice(len(self.actions), p=self.policy[state])  # Use policy
+            else:
+                if np.random.rand() < epsilon:
+                    action_idx = np.random.choice(len(self.actions))  # Explore
+                else:
+                    action_idx = np.random.choice(len(self.actions), p=self.policy[state])  # Exploit
+            action = self.actions[action_idx]
+            next_state, reward = self.step(state, action)
+            episode.append((state, action_idx, reward))
+            state = next_state
+            steps += 1
+
+        return episode
+
+# Question i of part 2
+    def monte_carlo_control(self, exploring_starts=True, epsilon=0.2, episodes=500):
+        returns = {(state, action): [] for state in np.ndindex(self.policy.shape[:2]) for action in range(len(self.actions))}
+
+        for _ in range(episodes):
+
+            episode = self.generate_episode(exploring_starts)
+            G = 0
+            for state, action, reward in reversed(episode):
+                G = self.discount_factor * G + reward
+                if not any([(s == state and a == action) for (s, a, r) in episode[:episode.index((state, action, reward))]]):
+                    returns[(state, action)].append(G)
+                    self.q_values[state][action] = np.mean(returns[(state, action)])
+                    best_action = np.argmax(self.q_values[state])
+                    for a in range(len(self.actions)):
+                        if a == best_action:
+                            self.policy[state][a] = 1 - epsilon + (epsilon / len(self.actions))
+                        else:
+                            self.policy[state][a] = epsilon / len(self.actions)
+
+# Creating an instance of the gridworld
+gridworld = ModifiedGridworld()
+
+# Monte carlo with exploring starts
+print("Running Monte Carlo Control with Exploring Starts:")
+gridworld.monte_carlo_control(exploring_starts=True)
+
+# Monte carlo with epsilon soft
+print("Running Monte Carlo Control with Epsilon-Soft:")
+gridworld.monte_carlo_control(exploring_starts=False)
+
+# Print the learned policies
+policy_exploring_starts = np.argmax(gridworld.policy, axis=2)
+policy_epsilon_soft = np.argmax(gridworld.policy, axis=2)
+
+print("\nFinal Policy with Exploring Starts:")
+print(policy_exploring_starts)
+print("\nFinal Policy with Epsilon-Soft:")
+print(policy_epsilon_soft)
+
+
+# Question ii of part 2
+class ImportanceSampling(ModifiedGridworld):
+
+    def behaviour_policy(self, state):
+        return np.ones(len(self.actions)) / len(self.actions)
+
+    def target_policy(self, state):
+        best_action = np.argmax(self.q_values[state[0], state[1]])
+        policy = np.zeros(len(self.actions))
+        policy[best_action] = 1.0
+        return policy
+
+    def importance_sampling(self, episodes=500):
+        for _ in range(episodes):
+
+            episode = self.generate_episode()
+            G = 0
+            W = 1.0
+            for state, action, reward in reversed(episode):
+                G = self.discount_factor * G + reward
+                self.q_values[state[0], state[1], action] += (W / (1.0 / len(self.actions))) * (G - self.q_values[state[0], state[1], action])
+                self.policy[state[0], state[1]] = self.target_policy(state)
+                W *= self.target_policy(state)[action] / self.behaviour_policy(state)[action]
+                if W == 0:
+                    break
+
+# Run with Importance Sampling
+print("Running with Importance Sampling:")
+mgis = ImportanceSampling()
+mgis.importance_sampling()
+print("Final Policy with Importance Sampling:")
+print(np.argmax(mgis.policy, axis=2))
+
+# Question iii of part 3
+class PermutationSampling(ModifiedGridworld):
+    def __init__(self):
+        super().__init__()
+
+    # Switching blue and green states randomly with probability of 0.1
+    def permute_special_states(self):
+        if np.random.random() < 0.1:
+            self.special_states[(0, 1)], self.special_states[(0, 4)] = self.special_states[(0, 4)], self.special_states[(0, 1)]
+
+    def print_special_states(self):
+        for position, (color, reward, _) in self.special_states.items():
+            if (color == 'blue' or color == 'green'):
+                print(f"Special State {position}: Color = {color}, Reward = {reward}")
+
+    def policy_iteration(self, theta=1e-6, max_iterations=10000):
+        policy = np.random.choice(len(self.actions), size=(self.grid_size, self.grid_size))
+        values = np.zeros((self.grid_size, self.grid_size))
+        
+        def policy_evaluation(policy):
+            for _ in range(max_iterations):
+                delta = 0
+                new_values = np.copy(values)
+                for state in np.ndindex(self.grid_size, self.grid_size):
+                    x, y = state
+                    v = values[x, y]
+                    action = self.actions[policy[x, y]]
+                    new_state, reward = self.step(state, action)
+                    next_x, next_y = new_state
+                    new_values[x, y] = reward + self.discount_factor * values[next_x, next_y]
+                    delta = max(delta, abs(v - new_values[x, y]))
+                values[:] = new_values
+                if delta < theta:
+                    break
+            return values
+        
+        iteration = 0
+        while True:
+            # Allowing permutation of states before evaluation
+            self.permute_special_states()
+            
+            print(f"\nIteration {iteration + 1}:")
+            self.print_special_states()
+            
+            policy_stable = True
+            values = policy_evaluation(policy)
+            
+            print("Values:\n", values)
+            print("Policy:\n", policy)
+            
+            new_policy = np.copy(policy) 
+            
+            for state in np.ndindex(self.grid_size, self.grid_size):
+                x, y = state
+                old_action = policy[x, y]
+                value_sum = []
+                for action in range(len(self.actions)):
+                    new_state, reward = self.step(state, self.actions[action])
+                    next_x, next_y = new_state
+                    value_sum.append(reward + self.discount_factor * values[next_x, next_y])
+                best_action = np.argmax(value_sum)
+
+                # Updating new policy
+                new_policy[x, y] = best_action
+                if old_action != best_action:
+                    policy_stable = False
+            
+            print(f"Updated Policy:\n", new_policy)
+            
+            policy = np.copy(new_policy)
+            
+            if policy_stable:
+                break
+            iteration += 1
+        
+        return policy  # Return the final policy
+
+mgp = PermutationSampling()
+final_policy = mgp.policy_iteration()
+print("Final Policy with Permutation:")
+print(final_policy)
