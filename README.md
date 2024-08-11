@@ -57,3 +57,29 @@ The task here is to compare two methods for the optimal policy:
 2. Importance sampling
 
 Additionally, we also observe the effect of switching two states in between iterations to see how the policies are affected.
+
+# A_3
+## Part 1
+
+In this [part](https://github.com/SaiGaneshPS/DSCI6650/blob/main/RL-A3/Question_1) we define a 5x5 gridworld with the two
+terminal states being at the top corners. In the middle, there are 4 pixels with a reward of -20 and only once center pixel
+with a normal transition reward of -1. Attempting to move out of the grid also assigns a reward of -1.
+
+We compare the performance of two famous RL algorithms:
+1. SARSA (On-Policy)
+2. Q-Learning (Off-Policy)
+
+The aim is to compare the plots of the trajectory of an agent utlizing the policy learned by each of the methods and also the sum of
+rewards after each episode.
+
+## Part 2
+
+[Here](https://github.com/SaiGaneshPS/DSCI6650/blob/main/RL-A3/Question_2) we have a grid with the following properties:
+
+1. Grid size: 7x7
+2. Terminal states: {6,0} Reward -1, {0,6} Reward +1
+3. Start state: [3,3]
+4. Reward for normal state-state and out of bounds transition: 0
+
+We compare the gradient monte carlo and semi gradient TD(0) function with the exact value function using a heatmap where the
+blue regions indicate a lower reward and the red regions indicate a higher reward.
